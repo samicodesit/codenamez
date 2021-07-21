@@ -156,11 +156,11 @@ export default {
       blue: 'red_spymaster',
     },
     timer: {
-      time: 10,
+      time: 90,
       team: null,
       instance: null,
     },
-    TIMER_DURATION: 10,
+    TIMER_DURATION: 90,
 
     // CLUES
     redClues: [],
@@ -174,10 +174,11 @@ export default {
     },
     myPlayer() {
       return (
-        this.ablyAuth &&
-        this.players.find(
-          (player) => player.clientId === this.ablyAuth.clientId
-        )
+        (this.ablyAuth &&
+          this.players.find(
+            (player) => player.clientId === this.ablyAuth.clientId
+          )) ||
+        {}
       )
     },
     redTeam() {
@@ -210,6 +211,8 @@ export default {
     gameEnded(value) {
       if (value) {
         this.turn = 'end'
+        clearInterval(this.timer.instance)
+        this.timer.instance = null
       }
     },
     'myPlayer.team'() {
@@ -359,6 +362,7 @@ export default {
       this.players = this.players.filter(
         (player) => player.clientId !== data.clientId
       )
+      this.removeUserTap(data.clientId)
     })
     // SUB: present
     this.playersChannel.presence.subscribe('present', (member) => {
@@ -473,6 +477,9 @@ export default {
       }
     },
     startTimer(team) {
+      clearInterval(this.timer.instance)
+      this.timer.instance = null
+
       this.timer.time = this.TIMER_DURATION
       this.timer.team = team
       this.timer.instance = setInterval(() => {
