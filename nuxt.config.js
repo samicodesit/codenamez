@@ -21,12 +21,9 @@ export default {
   plugins: [
   ],
 
-  server: {
-    host: '0.0.0.0'
-  },
   serverMiddleware: [
     {
-      path: '/server', handler: '~/server/index.js',
+      path: '/server-middleware', handler: '~/server-middleware/index.js',
     }
   ],
 
