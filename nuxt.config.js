@@ -18,12 +18,11 @@ export default {
   ],
 
   // Plugins to run before rendering page: https://go.nuxtjs.dev/config-plugins
-  plugins: [
-  ],
+  plugins: [],
 
   serverMiddleware: [
     {
-      path: '/server-middleware', handler: '~/server-middleware/index.js',
+      path: '/server', handler: '~/server/index.js',
     }
   ],
 
@@ -40,6 +39,7 @@ export default {
   modules: [
     // https://go.nuxtjs.dev/pwa
     '@nuxtjs/pwa',
+    '@nuxtjs/svg'
   ],
 
   // PWA module configuration: https://go.nuxtjs.dev/pwa
