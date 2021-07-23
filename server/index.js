@@ -5,6 +5,9 @@ const { nanoid } = require('nanoid');
 const app = express();
 
 const ably = Ably.Realtime(process.env.NUXT_ENV_ABLY_PRIVATE_KEY);
+ably.connection.on(function(stateChange) {
+    console.log('New connection state is ' + stateChange.current);
+  });
 
 app.use(express.urlencoded({extended: true}));
 app.use(express.json()) // To parse the incoming requests with JSON payloads
