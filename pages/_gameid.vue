@@ -170,6 +170,9 @@ export default {
       key: this.ably_key,
       authUrl: '/server/ably/auth',
       authMethod: 'POST',
+      recover(_, callme) {
+        callme(true)
+      },
     })
 
     // Init cards
