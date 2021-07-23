@@ -3,24 +3,24 @@
     <h2>Teams</h2>
     <button @click="joinTeam(null)">Return to spectators</button>
 
-    <div v-for="(team, teamCode, index) in teams" :key="index">
+    <div v-for="(team, teamCode, teamIndex) in teams" :key="teamIndex">
       <h3>{{ teamCode }} ({{ team.points }})</h3>
 
       <h4>Clues</h4>
       <form v-if="showClueInput(teamCode)" @submit.prevent="submitClue">
-        <input type="text" v-model="clueInput" />
+        <input v-model="clueInput" type="text" />
         <button type="submit">enter</button>
       </form>
       <ul>
-        <li v-for="(clue, index) in clues[teamCode]" :key="index">
+        <li v-for="(clue, clueIndex) in clues[teamCode]" :key="clueIndex">
           {{ clue }}
         </li>
       </ul>
 
       <button @click="joinTeam(teamCode)">Join {{ teamCode }}</button>
       <button
-        @click="joinTeam(teamCode, true)"
         :disabled="teamHasMaster(teamCode)"
+        @click="joinTeam(teamCode, true)"
       >
         Join {{ teamCode }} as Spymaster
       </button>
@@ -39,7 +39,28 @@ import { postApi } from '../utils'
 
 export default {
   name: 'AppTeams',
-  props: ['teams', 'playersChannel', 'cluesChannel', 'myPlayer', 'turn'],
+  props: {
+    teams: {
+      type: Object,
+      default: null,
+    },
+    playersChannel: {
+      type: Object,
+      default: null,
+    },
+    cluesChannel: {
+      type: Object,
+      default: null,
+    },
+    myPlayer: {
+      type: Object,
+      default: null,
+    },
+    turn: {
+      type: String,
+      default: '',
+    },
+  },
   data: () => ({
     TEAM_CONFIG: ['red', 'blue'],
 

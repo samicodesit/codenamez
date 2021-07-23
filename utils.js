@@ -13,7 +13,7 @@ export const postApi = (endpoint, body) => {
     try {
         return fetch(endpoint, options)
     } catch(err) {
-        console.error(err);
+        throw new Error(err)
     }
 
 }

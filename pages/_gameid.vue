@@ -4,7 +4,7 @@
     <p>Timer: {{ timer.team }} ---- {{ timer.time }}</p>
 
     <!-- SETTINGS -->
-    <app-settings :playersChannel="playersChannel" :myPlayer="myPlayer" />
+    <app-settings :players-channel="playersChannel" :my-player="myPlayer" />
 
     <!-- SPECTATORS -->
     <app-spectators :spectators="spectators" />
@@ -12,9 +12,9 @@
     <!-- TEAMS -->
     <app-teams
       :teams="teams"
-      :playersChannel="playersChannel"
-      :cluesChannel="cluesChannel"
-      :myPlayer="myPlayer"
+      :players-channel="playersChannel"
+      :clues-channel="cluesChannel"
+      :my-player="myPlayer"
       :turn="turn"
     />
 
@@ -45,13 +45,13 @@ import AppTeams from '~/components/AppTeams'
 
 export default {
   name: 'GameInstance',
-  asyncData({ env }) {
-    return { ably_key: env.NUXT_ENV_ABLY_PRIVATE_KEY }
-  },
   components: {
     AppSettings,
     AppSpectators,
     AppTeams,
+  },
+  asyncData({ env }) {
+    return { ably_key: env.NUXT_ENV_ABLY_PRIVATE_KEY }
   },
   data: () => ({
     // PLAYERS
@@ -59,6 +59,9 @@ export default {
     playersChannel: null,
     players: [],
     TEAM_CONFIG: ['red', 'blue'],
+
+    // CLUES
+    cluesChannel: null,
 
     // BOARD
     rawCards: [
@@ -88,9 +91,6 @@ export default {
       instance: null,
     },
     TIMER_DURATION: 90,
-
-    // CLUES
-    cluesChannel: null,
   }),
   computed: {
     ablyAuth() {
