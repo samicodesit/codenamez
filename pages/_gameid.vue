@@ -248,12 +248,15 @@ export default {
 
     // SUB: reset taps
     this.cardsChannel.subscribe('reset_taps', () => {
+      console.log('sub reset taps')
       this.cards = this.cards.map((card) => {
         return {
           ...card,
           taps: [],
         }
       })
+
+      console.log(this.cards, 'cards')
     })
 
     // **** Players channel ***** //
