@@ -10,39 +10,13 @@
     <app-spectators :spectators="spectators" />
 
     <!-- TEAMS -->
-    <section>
-      <h2>Teams</h2>
-      <button @click="joinTeam(null)">Return to spectators</button>
-
-      <div v-for="(team, teamCode, index) in teams" :key="index">
-        <h3>{{ teamCode }} ({{ team.points }})</h3>
-
-        <h4>Clues</h4>
-        <form v-if="showClueInput(teamCode)" @submit.prevent="submitClue">
-          <input type="text" v-model="clueInput" />
-          <button type="submit">enter</button>
-        </form>
-        <ul>
-          <li v-for="(clue, index) in clues[teamCode]" :key="index">
-            {{ clue }}
-          </li>
-        </ul>
-
-        <button @click="joinTeam(teamCode)">Join {{ teamCode }}</button>
-        <button
-          @click="joinTeam(teamCode, true)"
-          :disabled="teamHasMaster(teamCode)"
-        >
-          Join {{ teamCode }} as Spymaster
-        </button>
-        <ul>
-          <li v-for="member in teams[teamCode].players" :key="member.clientId">
-            {{ member.username }}
-            <span v-if="member.spymaster">(spymaster)</span>
-          </li>
-        </ul>
-      </div>
-    </section>
+    <app-teams
+      :teams="teams"
+      :playersChannel="playersChannel"
+      :cluesChannel="cluesChannel"
+      :myPlayer="myPlayer"
+      :turn="turn"
+    />
 
     <hr />
 
@@ -67,6 +41,7 @@ import { generateRandomColor, postApi } from '../utils'
 
 import AppSettings from '~/components/AppSettings'
 import AppSpectators from '~/components/AppSpectators'
+import AppTeams from '~/components/AppTeams'
 
 export default {
   name: 'GameInstance',
@@ -76,6 +51,7 @@ export default {
   components: {
     AppSettings,
     AppSpectators,
+    AppTeams,
   },
   data: () => ({
     // PLAYERS
@@ -114,9 +90,7 @@ export default {
     TIMER_DURATION: 90,
 
     // CLUES
-    clues: {},
     cluesChannel: null,
-    clueInput: '',
   }),
   computed: {
     ablyAuth() {
@@ -207,10 +181,8 @@ export default {
       }
     })
 
-    // Init team clues
-    this.TEAM_CONFIG.forEach((team) => {
-      this.clues[team] = []
-    })
+    // **** Clues channel ***** //
+    this.cluesChannel = this.ably.channels.get('clues')
 
     // **** Turn Channel ***** //
     this.turnChannel = this.ably.channels.get('turn')
@@ -284,13 +256,6 @@ export default {
       })
     })
 
-    // **** Clues channel ***** //
-    this.cluesChannel = this.ably.channels.get('clues')
-    this.cluesChannel.subscribe('add', ({ data }) => {
-      const { clue, team: teamCode } = data
-      this.clues[teamCode].push(clue)
-    })
-
     // **** Players channel ***** //
     this.playersChannel = this.ably.channels.get('presence-players')
 
@@ -337,21 +302,6 @@ export default {
 
   methods: {
     testApi() {},
-    joinTeam(team, spymaster = false) {
-      this.playersChannel.presence.update({
-        ...this.myPlayer,
-        team,
-        spymaster,
-      })
-    },
-    showClueInput(teamCode) {
-      return (
-        this.myPlayer &&
-        this.myPlayer.spymaster &&
-        this.turn === `${teamCode}_spymaster` &&
-        this.turn.includes(this.myPlayer.team)
-      )
-    },
     retrieveUsername() {
       let username = localStorage.getItem('cn_username')
       if (!username) {
@@ -389,17 +339,6 @@ export default {
         color: cardColor,
       })
     },
-    submitClue() {
-      const { team } = this.myPlayer
-      this.cluesChannel.publish('add', {
-        clue: this.clueInput,
-        team,
-      })
-      this.clueInput = ''
-
-      const nextTurn = this.turn.split('_')[0]
-      postApi('/server/turn/change', { turn: nextTurn })
-    },
     removeUserTap(clientId) {
       const cardWithTapExists = this.cards.find((card) =>
         card.taps.find((tap) => tap.clientId === clientId)
@@ -430,11 +369,6 @@ export default {
           clearInterval(this.timer.instance)
         }
       }, 1000)
-    },
-    teamHasMaster(teamCode) {
-      if (this.teams) {
-        return this.teams[teamCode].players.find((player) => player.spymaster)
-      }
     },
   },
 }
