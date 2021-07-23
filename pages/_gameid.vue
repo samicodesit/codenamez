@@ -1,99 +1,42 @@
 <template>
   <div v-if="playersChannel">
-    <h1>Codenamez - Room: {{ $route.params.gameid }}</h1>
+    <button @click="testApi">test...</button>
     <p>Timer: {{ timer.team }} ---- {{ timer.time }}</p>
 
-    <hr />
+    <!-- SETTINGS -->
+    <app-settings :playersChannel="playersChannel" :myPlayer="myPlayer" />
 
-    <!-- MY DATA -->
-    <section v-if="myPlayer">
-      <p>Your clientId is: {{ myPlayer.clientId }}</p>
-      <p>Your username is: {{ myPlayer.username }}</p>
-      <div>
-        <button @click="promptUsernameChange">change username</button>
-      </div>
-    </section>
-
-    <hr />
-
-    <!-- MEMBERS -->
-    <section>
-      <h2>Members</h2>
-      <ul>
-        <li v-for="(player, index) in players" :key="index">
-          <code>
-            {{ player }}
-          </code>
-        </li>
-      </ul>
-    </section>
-
-    <hr />
+    <!-- SPECTATORS -->
+    <app-spectators :spectators="spectators" />
 
     <!-- TEAMS -->
     <section>
       <h2>Teams</h2>
       <button @click="joinTeam(null)">Return to spectators</button>
-      <div>
-        <h3>Red ({{ redTeam.points }})</h3>
+
+      <div v-for="(team, teamCode, index) in teams" :key="index">
+        <h3>{{ teamCode }} ({{ team.points }})</h3>
 
         <h4>Clues</h4>
-        <form
-          v-if="
-            myPlayer &&
-            myPlayer.spymaster &&
-            turn === 'red_spymaster' &&
-            turn.includes(myPlayer.team)
-          "
-          @submit.prevent="submitClue"
-        >
+        <form v-if="showClueInput(teamCode)" @submit.prevent="submitClue">
           <input type="text" v-model="clueInput" />
           <button type="submit">enter</button>
         </form>
         <ul>
-          <li v-for="(clue, index) in redClues" :key="index">{{ clue }}</li>
-        </ul>
-
-        <button @click="joinTeam('red')">Join Red</button>
-        <button @click="joinTeam('red', true)" :disabled="redHasMaster">
-          Join Red as Spymaster
-        </button>
-        <ul>
-          <li v-for="member in redTeam.players" :key="member.clientId">
-            {{ member.username }}
-            <span v-if="member.spymaster">(spymaster)</span>
+          <li v-for="(clue, index) in clues[teamCode]" :key="index">
+            {{ clue }}
           </li>
         </ul>
-      </div>
 
-      <hr />
-
-      <div>
-        <h3>Blue ({{ blueTeam.points }})</h3>
-
-        <h4>Clues</h4>
-        <form
-          v-if="
-            myPlayer &&
-            myPlayer.spymaster &&
-            turn === 'blue_spymaster' &&
-            turn.includes(myPlayer.team)
-          "
-          @submit.prevent="submitClue"
+        <button @click="joinTeam(teamCode)">Join {{ teamCode }}</button>
+        <button
+          @click="joinTeam(teamCode, true)"
+          :disabled="teamHasMaster(teamCode)"
         >
-          <input type="text" v-model="clueInput" />
-          <button type="submit">enter</button>
-        </form>
-        <ul>
-          <li v-for="(clue, index) in blueClues" :key="index">{{ clue }}</li>
-        </ul>
-
-        <button @click="joinTeam('blue')">Join Blue</button>
-        <button @click="joinTeam('blue', true)" :disabled="blueHasMaster">
-          Join Blue as Spymaster
+          Join {{ teamCode }} as Spymaster
         </button>
         <ul>
-          <li v-for="member in blueTeam.players" :key="member.clientId">
+          <li v-for="member in teams[teamCode].players" :key="member.clientId">
             {{ member.username }}
             <span v-if="member.spymaster">(spymaster)</span>
           </li>
@@ -120,18 +63,26 @@
 
 <script>
 import Ably from 'ably'
-import { postApi, generateRandomColor } from '../utils'
+import { generateRandomColor, postApi } from '../utils'
+
+import AppSettings from '~/components/AppSettings'
+import AppSpectators from '~/components/AppSpectators'
 
 export default {
   name: 'GameInstance',
   asyncData({ env }) {
     return { ably_key: env.NUXT_ENV_ABLY_PRIVATE_KEY }
   },
+  components: {
+    AppSettings,
+    AppSpectators,
+  },
   data: () => ({
     // PLAYERS
     ably: {},
     playersChannel: null,
     players: [],
+    TEAM_CONFIG: ['red', 'blue'],
 
     // BOARD
     rawCards: [
@@ -147,7 +98,7 @@ export default {
 
     // TURN
     // TODO: change initial turn
-    turn: 'red_spymaster',
+    turn: 'red',
     turnChannel: null,
     turnOrder: {
       red_spymaster: 'red',
@@ -163,8 +114,7 @@ export default {
     TIMER_DURATION: 90,
 
     // CLUES
-    redClues: [],
-    blueClues: [],
+    clues: {},
     cluesChannel: null,
     clueInput: '',
   }),
@@ -181,30 +131,27 @@ export default {
         {}
       )
     },
-    redTeam() {
-      const players = this.players.filter((player) => player.team === 'red')
-      const points = this.cards
-        .filter((card) => card.color === 'red')
-        .filter((card) => !card.opened).length
+    spectators() {
+      return this.players.filter((player) => !player.team)
+    },
+    teams() {
+      const _teams = {}
+      this.TEAM_CONFIG.forEach((teamCode) => {
+        const players = this.players.filter(
+          (player) => player.team === teamCode
+        )
+        const points = this.cards
+          .filter((card) => card.color === teamCode)
+          .filter((card) => !card.opened).length
 
-      return { players, points }
-    },
-    blueTeam() {
-      const players = this.players.filter((player) => player.team === 'blue')
-      const points = this.cards
-        .filter((card) => card.color === 'blue')
-        .filter((card) => !card.opened).length
+        const team = { players, points }
+        _teams[teamCode] = team
+      })
 
-      return { players, points }
-    },
-    redHasMaster() {
-      return this.redTeam.players.find((player) => player.spymaster)
-    },
-    blueHasMaster() {
-      return this.blueTeam.players.find((player) => player.spymaster)
+      return _teams
     },
     gameEnded() {
-      return !this.redTeam.points || !this.blueTeam.points
+      return Object.values(this.teams).find((team) => !team.points)
     },
   },
   watch: {
@@ -223,9 +170,7 @@ export default {
       )
       if (!cardWithTapExists) return
 
-      postApi('/server/cards/remove_tap', {
-        clientId: myID,
-      })
+      postApi('/server/cards/remove_tap', { clientId: myID })
     },
     'myPlayer.spymaster'() {
       const myID = this.myPlayer.clientId
@@ -235,17 +180,13 @@ export default {
       )
       if (!cardWithTapExists) return
 
-      postApi('/server/cards/remove_tap', {
-        clientId: myID,
-      })
+      postApi('/server/cards/remove_tap', { clientId: myID })
     },
     'timer.time'(time) {
       if (time === 0) {
         const nextTurn = this.turnOrder[this.turn]
 
-        postApi('/server/turn/change', {
-          turn: nextTurn,
-        })
+        postApi('/server/turn/change', { turn: nextTurn })
       }
     },
   },
@@ -266,11 +207,17 @@ export default {
       }
     })
 
+    // Init team clues
+    this.TEAM_CONFIG.forEach((team) => {
+      this.clues[team] = []
+    })
+
     // **** Turn Channel ***** //
     this.turnChannel = this.ably.channels.get('turn')
 
     // SUB: change turn
     this.turnChannel.subscribe('change', (message) => {
+      // update turn
       const { turn } = message.data
       this.turn = turn
     })
@@ -291,9 +238,8 @@ export default {
         clientId,
       } = message
 
-      const { team: myColor } = this.myPlayer
       const cardFound = this.cards.find((card) => card.word === word)
-      const currentTeam = this.turn === 'red' ? this.redTeam : this.blueTeam
+      const currentTeam = this.teams[this.turn]
 
       const cardWithTapExists = this.cards.find((card) =>
         card.taps.find((tap) => tap.clientId === clientId)
@@ -310,14 +256,15 @@ export default {
       if (cardFound.taps.length === operativesCount) {
         cardFound.opened = true
 
-        // reset taps
-        postApi('/server/cards/reset_taps')
-
         // wrong card opened
-        if (myColor !== cardColor) {
+        if (this.turn !== cardColor) {
           const nextTurn = this.turnOrder[this.turn]
           postApi('/server/turn/change', { turn: nextTurn })
+          return
         }
+
+        // reset taps
+        postApi('/server/cards/reset_taps')
       }
     })
 
@@ -340,13 +287,8 @@ export default {
     // **** Clues channel ***** //
     this.cluesChannel = this.ably.channels.get('clues')
     this.cluesChannel.subscribe('add', ({ data }) => {
-      const { clue, team } = data
-      if (team === 'red') {
-        this.redClues.push(clue)
-      }
-      if (team === 'blue') {
-        this.blueClues.push(clue)
-      }
+      const { clue, team: teamCode } = data
+      this.clues[teamCode].push(clue)
     })
 
     // **** Players channel ***** //
@@ -394,21 +336,21 @@ export default {
   },
 
   methods: {
-    promptUsernameChange() {
-      const newUsername = prompt('Enter new username')
-      localStorage.setItem('cn_username', newUsername)
-
-      this.playersChannel.presence.update({
-        ...this.myPlayer,
-        username: newUsername,
-      })
-    },
+    testApi() {},
     joinTeam(team, spymaster = false) {
       this.playersChannel.presence.update({
         ...this.myPlayer,
         team,
         spymaster,
       })
+    },
+    showClueInput(teamCode) {
+      return (
+        this.myPlayer &&
+        this.myPlayer.spymaster &&
+        this.turn === `${teamCode}_spymaster` &&
+        this.turn.includes(this.myPlayer.team)
+      )
     },
     retrieveUsername() {
       let username = localStorage.getItem('cn_username')
@@ -489,12 +431,55 @@ export default {
         }
       }, 1000)
     },
+    teamHasMaster(teamCode) {
+      if (this.teams) {
+        return this.teams[teamCode].players.find((player) => player.spymaster)
+      }
+    },
   },
 }
 </script>
 
 <style>
-.card {
-  border: 2px solid black;
+/* Base */
+:root {
+  --primary: #343a40;
+  --secondary: #7952b3;
+  --accent: #ffc107;
+  --light: #e1e8eb;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--primary);
+  color: var(--light);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin: 0;
+}
+
+ul {
+  padding: 0;
+  list-style: none;
+}
+
+/* General */
+button {
+  cursor: pointer;
+  background: none;
+  outline: none;
+  border: none;
 }
 </style>

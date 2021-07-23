@@ -1,11 +1,21 @@
-export const postApi = (endpoint, body = {}) => {
-    return fetch(endpoint, {
+export const postApi = (endpoint, body) => {
+    const options = {
         method: 'POST',
-        body: JSON.stringify(body),
-        headers: {
-            'Content-Type': 'application/json',
-          },
-    })
+    }
+
+    if (body) {
+        options.body = JSON.stringify(body);
+        options.headers = {
+            'Content-Type': 'application/json'
+        }
+    }
+
+    try {
+        return fetch(endpoint, options)
+    } catch(err) {
+        console.error(err);
+    }
+
 }
 
 export const generateRandomColor = () => {

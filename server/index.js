@@ -13,7 +13,7 @@ app.post("/ably/auth", (req, res) => {
     const uniqueID = nanoid();
     ably.auth.createTokenRequest({ clientId: uniqueID, foo: 'bar' }, (err, tokenRequest) => {
         if (err) {
-            console.log(err);
+            console.error(err);
             res.status(500);
             res.send(err);
         } else {
@@ -23,24 +23,29 @@ app.post("/ably/auth", (req, res) => {
 });
 
 app.post('/turn/change', (req, res) => {
-    const { turn } = req.body
-    const turnChannel = ably.channels.get('turn');
-    turnChannel.publish('change', {
-        turn,
-    })
-    turnChannel.publish('start_timer', {
-        team: turn
-    })
-
-    const cardsChannel = ably.channels.get('cards')
-    cardsChannel.publish('reset_taps', {
-        all: true
-    })
-
-    return res.send({ status: 200 })
+    try {
+        const { turn } = req.body
+        const turnChannel = ably.channels.get('turn');
+     
+        turnChannel.publish('change', {
+            turn,
+        })
+        turnChannel.publish('start_timer', {
+            team: turn
+        })
+    
+        if (turn.includes('spymaster')) {
+            const cardsChannel = ably.channels.get('cards')
+            cardsChannel.publish('reset_taps', { all: true })
+        }
+    
+        res.status(200).json({ success: 'ok' })
+    } catch(err) {
+        res.status(500).json({ error: err})
+    }
 })
 
-app.post('/turn/timer', (req) => {
+app.post('/turn/timer', (req, res) => {
     const { team } = req.body
     const turnChannel = ably.channels.get('turn')
     turnChannel.publish('start_timer', {
@@ -50,13 +55,15 @@ app.post('/turn/timer', (req) => {
     return res.send({ status: 200 })
 })
 
-app.post('/cards/reset_taps', () => {
-    const cardsChannel = ably.channels.get('cards')
-    cardsChannel.publish('reset_taps', {
-        all: true,
-    })
+app.post('/cards/reset_taps', (req, res) => {
+    try {
+        const cardsChannel = ably.channels.get('cards')
+        cardsChannel.publish('reset_taps', { all: true })
 
-    return res.send({ status: 200 })
+        res.status(200).json({ success: 'ok' })
+    } catch(err) {
+        res.status(500).json({ error: err })
+    }
 })
 
 app.post('/cards/remove_tap', (req, res) => {
@@ -68,6 +75,10 @@ app.post('/cards/remove_tap', (req, res) => {
     })
 
     return res.send({ status: 200 })
+})
+
+app.post('/test', (req, res) => {
+    res.status(222).end();
 })
 
 module.exports = app;
