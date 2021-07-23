@@ -48,7 +48,7 @@ export default {
   position: fixed;
   bottom: 0;
   right: 0;
-  z-index: 10;
+  z-index: 50;
 }
 
 .spectators-box__count {

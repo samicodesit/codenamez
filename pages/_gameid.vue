@@ -1,7 +1,7 @@
 <template>
-  <div v-if="playersChannel">
-    <button @click="testApi">test...</button>
-    <p>Timer: {{ timer.team }} ---- {{ timer.time }}</p>
+  <div class="page" v-if="playersChannel">
+    <!-- <button @click="testApi">test...</button> -->
+    <!-- <p>Timer: {{ timer.team }} ---- {{ timer.time }}</p> -->
 
     <!-- SETTINGS -->
     <app-settings :players-channel="playersChannel" :my-player="myPlayer" />
@@ -14,20 +14,22 @@
       :teams="teams"
       :players-channel="playersChannel"
       :clues-channel="cluesChannel"
+      :turn-channel="turnChannel"
       :my-player="myPlayer"
       :turn="turn"
+      :timer="timer"
     />
 
-    <hr />
-
     <!-- BOARD -->
-    <section>
+    <section class="board" :style="getBoardColor()">
+      <div class="board__tint"></div>
       <h2>CURRENT TURN: {{ turn }}</h2>
       <div
         v-for="(card, index) in cards"
         :key="index"
         :style="getCardStyle(card)"
         @click="tapCard(card)"
+        class="board__cards"
       >
         <p>{{ card }}</p>
       </div>
@@ -38,6 +40,7 @@
 <script>
 import Ably from 'ably'
 import { generateRandomColor, postApi } from '../utils'
+import { TURN_ORDER, TEAM_CONFIG } from '../config'
 
 import AppSettings from '~/components/AppSettings'
 import AppSpectators from '~/components/AppSpectators'
@@ -58,7 +61,7 @@ export default {
     ably: {},
     playersChannel: null,
     players: [],
-    TEAM_CONFIG: ['red', 'blue'],
+    TEAM_CONFIG,
 
     // CLUES
     cluesChannel: null,
@@ -67,24 +70,22 @@ export default {
     rawCards: [
       { word: 'Banana', color: 'red' },
       { word: 'Apple', color: 'blue' },
+      { word: 'Danger', color: 'black' },
       { word: 'Pear', color: 'blue' },
       { word: 'Watermelon', color: 'red' },
       { word: 'Strawberry', color: 'blue' },
+      { word: 'Hazard', color: 'black' },
       { word: 'Orange', color: 'red' },
+      { word: 'Death', color: 'black' },
     ],
     cards: [],
     cardsChannel: null,
 
     // TURN
     // TODO: change initial turn
-    turn: 'red',
+    TURN_ORDER,
+    turn: 'red_spymaster',
     turnChannel: null,
-    turnOrder: {
-      red_spymaster: 'red',
-      red: 'blue_spymaster',
-      blue_spymaster: 'blue',
-      blue: 'red_spymaster',
-    },
     timer: {
       time: 90,
       team: null,
@@ -158,7 +159,7 @@ export default {
     },
     'timer.time'(time) {
       if (time === 0) {
-        const nextTurn = this.turnOrder[this.turn]
+        const nextTurn = this.TURN_ORDER[this.turn]
 
         postApi('/server/turn/change', { turn: nextTurn })
       }
@@ -192,6 +193,11 @@ export default {
       // update turn
       const { turn } = message.data
       this.turn = turn
+
+      if (turn === 'end') {
+        clearInterval(this.timer.instance)
+        this.timer.instance = null
+      }
     })
 
     // SUB: start timer
@@ -228,9 +234,15 @@ export default {
       if (cardFound.taps.length === operativesCount) {
         cardFound.opened = true
 
+        // black card opened
+        if (cardColor === 'black') {
+          postApi('/server/turn/change', { turn: 'end' })
+          return
+        }
+
         // wrong card opened
         if (this.turn !== cardColor) {
-          const nextTurn = this.turnOrder[this.turn]
+          const nextTurn = this.TURN_ORDER[this.turn]
           postApi('/server/turn/change', { turn: nextTurn })
           return
         }
@@ -248,15 +260,12 @@ export default {
 
     // SUB: reset taps
     this.cardsChannel.subscribe('reset_taps', () => {
-      console.log('sub reset taps')
       this.cards = this.cards.map((card) => {
         return {
           ...card,
           taps: [],
         }
       })
-
-      console.log(this.cards, 'cards')
     })
 
     // **** Players channel ***** //
@@ -334,6 +343,7 @@ export default {
       const noTeam = !myColor
       const notMyTurn = this.turn !== myColor
 
+      // cannot tap
       if (isSpymaster || cardOpened || noTeam || notMyTurn || this.gameEnded)
         return
 
@@ -373,6 +383,17 @@ export default {
         }
       }, 1000)
     },
+    getBoardColor() {
+      const turn = this.turn.split('_')[0]
+      const colorMap = {
+        red: 'red-lighter',
+        blue: 'blue-lighter',
+        green: 'green-lighter',
+      }
+      const color = colorMap[turn]
+
+      return { backgroundColor: `var(--${color})` }
+    },
   },
 }
 </script>
@@ -384,12 +405,25 @@ export default {
   --secondary: #7952b3;
   --accent: #ffc107;
   --light: #e1e8eb;
+
+  --red: #910003;
+  --blue: #162c4d;
+  --green: #0e3e18;
+
+  --red-lighter: #ff2f33;
+  --blue-lighter: rgba(88, 136, 207, 0.4);
+}
+
+#__nuxt,
+#__layout {
+  height: 100%;
 }
 
 html,
 body {
   margin: 0;
   padding: 0;
+  height: 100%;
 }
 
 body {
@@ -409,6 +443,7 @@ p {
 
 ul {
   padding: 0;
+  margin: 0;
   list-style: none;
 }
 
@@ -418,5 +453,50 @@ button {
   background: none;
   outline: none;
   border: none;
+  color: var(--light);
+}
+
+.button--teams {
+  border: 1px solid var(--light);
+  border-radius: 4px;
+  padding: 6px;
+  width: 100%;
+  font-weight: bold;
+  background: rgba(256, 256, 256, 0.2);
+  position: relative;
+  z-index: 20;
+}
+
+.icon--small {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+}
+
+.page {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+
+.board {
+  flex: 1;
+  position: relative;
+}
+
+.board__tint {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  background: black;
+  opacity: 0.8;
+}
+
+.board__cards {
+  position: relative;
+  z-index: 20;
 }
 </style>

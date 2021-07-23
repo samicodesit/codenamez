@@ -33,13 +33,18 @@ app.post('/turn/change', (req, res) => {
         turnChannel.publish('change', {
             turn,
         })
-        turnChannel.publish('start_timer', {
-            team: turn
-        })
+
+        if (turn !== 'end') {
+            turnChannel.publish('start_timer', {
+                team: turn
+            })
+        }
     
         if (turn.includes('spymaster')) {
             const cardsChannel = ably.channels.get('cards')
             cardsChannel.publish('reset_taps', { all: true })
+
+            turnChannel.publish('reset_end_turn_taps', { all: true })
         }
     
         res.status(200).json({ success: 'ok' })
@@ -78,6 +83,18 @@ app.post('/cards/remove_tap', (req, res) => {
     })
 
     return res.send({ status: 200 })
+})
+
+app.post('/clues/add', (req, res) => {
+    const { clue, team } = req.body
+
+    const cluesChannel = ably.channels.get('clues')
+    cluesChannel.publish('add', {
+        clue,
+        team,
+    })
+
+    res.status(200).json({ success: 'ok' })
 })
 
 app.post('/test', (req, res) => {

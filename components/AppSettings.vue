@@ -39,6 +39,7 @@ export default {
   position: absolute;
   bottom: 0;
   right: left;
+  z-index: 50;
 }
 
 .settings__button {
