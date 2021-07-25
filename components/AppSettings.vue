@@ -43,7 +43,7 @@ export default {
 }
 
 .settings__button {
-  background: var(--secondary);
+  background: var(--primary);
   border-top-right-radius: 6px;
   padding: 8px;
 }

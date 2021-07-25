@@ -23,15 +23,29 @@
     <!-- BOARD -->
     <section class="board" :style="getBoardColor()">
       <div class="board__tint"></div>
-      <h2>CURRENT TURN: {{ turn }}</h2>
-      <div
-        v-for="(card, index) in cards"
-        :key="index"
-        :style="getCardStyle(card)"
-        @click="tapCard(card)"
-        class="board__cards"
-      >
-        <p>{{ card }}</p>
+      <span>CURRENT TURN: {{ turn }}</span>
+      <div class="board__cards">
+        <div
+          v-for="(card, index) in cards"
+          :key="index"
+          :style="getCardStyle(card)"
+          @click="tapCard(card)"
+          class="card"
+        >
+          <div class="card__content">
+            <p class="card__word">{{ card.word }}</p>
+          </div>
+
+          <div class="card__taps">
+            <span
+              v-for="(tap, tapIndex) in card.taps"
+              :key="tapIndex"
+              class="ball"
+              :style="getBallStyle(tap)"
+              >&bull;</span
+            >
+          </div>
+        </div>
       </div>
     </section>
   </div>
@@ -76,6 +90,33 @@ export default {
       { word: 'Strawberry', color: 'blue' },
       { word: 'Hazard', color: 'black' },
       { word: 'Orange', color: 'red' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
+      { word: 'Death', color: 'black' },
       { word: 'Death', color: 'black' },
     ],
     cards: [],
@@ -325,9 +366,12 @@ export default {
     },
     getCardStyle(card) {
       const { opened, color } = card
+
       return {
         backgroundColor:
-          (this.myPlayer && this.myPlayer.spymaster) || opened ? color : 'gray',
+          (this.myPlayer && this.myPlayer.spymaster) || opened
+            ? `var(--${color})`
+            : 'gray',
         color: 'white',
         cursor: 'pointer',
       }
@@ -394,11 +438,19 @@ export default {
 
       return { backgroundColor: `var(--${color})` }
     },
+    getBallStyle(tap) {
+      const color =
+        this.players &&
+        this.players.find((player) => player.clientId === tap.clientId).ball
+      return { color }
+    },
   },
 }
 </script>
 
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+
 /* Base */
 :root {
   --primary: #343a40;
@@ -406,6 +458,7 @@ export default {
   --accent: #ffc107;
   --light: #e1e8eb;
 
+  --black: #161616;
   --red: #910003;
   --blue: #162c4d;
   --green: #0e3e18;
@@ -424,6 +477,7 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
+  font-family: 'Roboto', sans-serif;
 }
 
 body {
@@ -454,6 +508,7 @@ button {
   outline: none;
   border: none;
   color: var(--light);
+  font-family: 'Roboto', sans-serif;
 }
 
 .button--teams {
@@ -492,11 +547,67 @@ button {
   bottom: 0;
   z-index: 10;
   background: black;
-  opacity: 0.8;
+  opacity: 0.7;
 }
 
 .board__cards {
   position: relative;
   z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.card {
+  flex-basis: calc(16.666% - 2px);
+  box-sizing: border-box;
+  margin: 1px;
+  padding: 2px;
+  display: flex;
+  text-align: center;
+  border: 1px solid var(--light);
+  text-transform: uppercase;
+  position: relative;
+  border-radius: 4px;
+}
+
+.card::before {
+  content: '';
+  display: block;
+  padding-top: 100%;
+}
+
+.card > .card__content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+}
+
+.card__word {
+  word-break: break-word;
+  hyphens: auto;
+  font-size: 12px;
+}
+
+.card__taps {
+  position: absolute;
+  top: 4px;
+  display: flex;
+}
+
+.ball {
+  font-size: 28px;
+  height: 8px;
+  width: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
 }
 </style>

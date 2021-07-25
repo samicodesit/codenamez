@@ -53,7 +53,7 @@ export default {
 
 .spectators-box__count {
   padding: 10px;
-  background: var(--secondary);
+  background: var(--primary);
   color: var(--light);
   border-top-left-radius: 6px;
   display: flex;

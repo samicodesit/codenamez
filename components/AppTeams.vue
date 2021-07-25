@@ -27,9 +27,19 @@
         >
           Become spymaster
         </button>
-        <p v-else>
-          {{ team.players.find((player) => player.spymaster).username }}
-        </p>
+        <div class="spymaster" v-else>
+          <span
+            class="ball"
+            :style="
+              getBallStyle(team.players.find((player) => player.spymaster).ball)
+            "
+            @click="updateBallColor()"
+            >&bull;</span
+          >
+          <span class="spymaster__username">{{
+            team.players.find((player) => player.spymaster).username
+          }}</span>
+        </div>
       </div>
       <hr />
 
@@ -47,9 +57,15 @@
               (player) => !player.spymaster
             )"
             :key="member.clientId"
+            class="operative"
           >
-            {{ member.username }}
-            <span v-if="member.spymaster">(spymaster)</span>
+            <span
+              class="ball"
+              :style="getBallStyle(member.ball)"
+              @click="updateBallColor"
+              >&bull;</span
+            >
+            <span class="operative__username">{{ member.username }}</span>
           </li>
         </ul>
       </div>
@@ -65,7 +81,7 @@
             !myPlayer.spymaster
           "
         >
-          Wait for spymaster's clues
+          Wait for your spymaster
         </p>
 
         <form
@@ -258,6 +274,24 @@ export default {
     getTeamColor(teamCode) {
       return { backgroundColor: `var(--${teamCode})` }
     },
+    getBallStyle(tap) {
+      if (tap.includes('#')) {
+        return { color: tap }
+      }
+      const color =
+        this.players &&
+        this.players.find((player) => player.clientId === tap.clientId).ball
+      return { color }
+    },
+    updateBallColor() {
+      // return
+      // const newBallColor = generateRandomColor()
+      // console.log(newBallColor)
+      // this.playersChannel.presence.update({
+      //   ...this.myPlayer,
+      //   ball: newBallColor,
+      // })
+    },
   },
 }
 </script>
@@ -310,6 +344,22 @@ export default {
   margin-top: 12px;
 }
 
+.operative {
+  display: flex;
+  align-items: center;
+}
+
+.spymaster {
+  display: flex;
+  align-items: center;
+}
+
+.spymaster__username,
+.operative__username {
+  margin-left: 4px;
+  font-size: 14px;
+}
+
 .clues {
   margin-top: 20px;
   margin-bottom: 12px;
@@ -327,6 +377,7 @@ export default {
 .clues__input {
   z-index: 20;
   width: 80%;
+  border-radius: 4px;
 }
 
 .clues__button {
