@@ -32,6 +32,7 @@ app.post('/turn/change', (req, res) => {
      
         turnChannel.publish('change', {
             turn,
+            timestamp: new Date().getTime(),
         })
 
         if (turn !== 'end') {

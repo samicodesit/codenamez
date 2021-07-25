@@ -15,7 +15,7 @@
       >
         <div class="teams__timer-wrapper">
           <timer-icon class="icon icon--small" />
-          <span>{{ timer.time }}</span>
+          <span>{{ getTimerFromSeconds(timeCounter) }}</span>
         </div>
       </div>
 
@@ -116,7 +116,7 @@
 </template>
 
 <script>
-import { postApi } from '../utils'
+import { postApi, getTimerFromSeconds } from '../utils'
 import { TURN_ORDER } from '../config'
 
 import TimerIcon from '~/assets/icons/timer.svg?inline'
@@ -154,6 +154,10 @@ export default {
     timer: {
       type: Object,
       default: null,
+    },
+    timeCounter: {
+      type: Number,
+      default: 0,
     },
   },
   data: () => ({
@@ -283,6 +287,7 @@ export default {
         this.players.find((player) => player.clientId === tap.clientId).ball
       return { color }
     },
+    getTimerFromSeconds,
     updateBallColor() {
       // return
       // const newBallColor = generateRandomColor()

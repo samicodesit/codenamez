@@ -18,6 +18,7 @@
       :my-player="myPlayer"
       :turn="turn"
       :timer="timer"
+      :timeCounter="timeCounter"
     />
 
     <!-- BOARD -->
@@ -129,9 +130,11 @@ export default {
     turnChannel: null,
     timer: {
       time: 90,
+      end_timestamp: null,
       team: null,
       instance: null,
     },
+    timeCounter: null,
     TIMER_DURATION: 90,
   }),
   computed: {
@@ -198,8 +201,8 @@ export default {
 
       postApi('/server/cards/remove_tap', { clientId: myID })
     },
-    'timer.time'(time) {
-      if (time === 0) {
+    timeCounter(time) {
+      if (Math.floor(time) === 0) {
         const nextTurn = this.TURN_ORDER[this.turn]
 
         postApi('/server/turn/change', { turn: nextTurn })
@@ -232,8 +235,9 @@ export default {
     // SUB: change turn
     this.turnChannel.subscribe('change', (message) => {
       // update turn
-      const { turn } = message.data
+      const { turn, timestamp } = message.data
       this.turn = turn
+      this.timer.end_timestamp = timestamp + this.timer.time * 1000
 
       if (turn === 'end') {
         clearInterval(this.timer.instance)
@@ -418,11 +422,12 @@ export default {
       clearInterval(this.timer.instance)
       this.timer.instance = null
 
-      this.timer.time = this.TIMER_DURATION
+      this.timeCounter =
+        (this.timer.end_timestamp - new Date().getTime()) / 1000 + 1
       this.timer.team = team
       this.timer.instance = setInterval(() => {
-        this.timer.time--
-        if (this.timer.time === 0) {
+        this.timeCounter--
+        if (Math.floor(this.timeCounter) === 0) {
           clearInterval(this.timer.instance)
         }
       }, 1000)
