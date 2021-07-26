@@ -15,6 +15,7 @@
       :players-channel="playersChannel"
       :clues-channel="cluesChannel"
       :turn-channel="turnChannel"
+      :players="players"
       :my-player="myPlayer"
       :turn="turn"
       :timer="timer"
@@ -126,7 +127,7 @@ export default {
     // TURN
     // TODO: change initial turn
     TURN_ORDER,
-    turn: 'red_spymaster',
+    turn: 'red',
     turnChannel: null,
     timer: {
       time: 90,

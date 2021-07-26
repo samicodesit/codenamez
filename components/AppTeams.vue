@@ -99,18 +99,24 @@
         </ul>
       </div>
 
-      <button
-        v-if="turn === teamCode && !myPlayer.spymaster"
-        class="button--teams"
-        @click="tapEndTurn"
-      >
-        End turn
-      </button>
-      <ul :key="`end_${endRenderKey}`">
-        <li v-for="(tapId, tapIndex) in endTurnCount[teamCode]" :key="tapIndex">
-          {{ tapId }}
-        </li>
-      </ul>
+      <div class="teams__end-turn end-turn">
+        <button
+          v-if="turn === teamCode && !myPlayer.spymaster"
+          class="button--teams end-turn__button"
+          @click="tapEndTurn"
+        >
+          End turn
+        </button>
+        <ul class="end-turn__balls" :key="`end_${endRenderKey}`">
+          <li
+            class="end-turn__ball"
+            v-for="(tap, tapIndex) in endTurnCount[teamCode]"
+            :key="tapIndex"
+          >
+            <span class="ball" :style="getBallStyle(tap)">&bull;</span>
+          </li>
+        </ul>
+      </div>
     </div>
   </section>
 </template>
@@ -141,6 +147,10 @@ export default {
     },
     turnChannel: {
       type: Object,
+      default: null,
+    },
+    players: {
+      type: Array,
       default: null,
     },
     myPlayer: {
@@ -197,18 +207,18 @@ export default {
       } = message
 
       const userTapExists = this.endTurnCount[turn].find(
-        (tapId) => tapId === clientId
+        (tap) => tap.clientId === clientId
       )
       if (userTapExists) {
         this.endTurnCount[turn] = this.endTurnCount[turn].filter(
-          (tapId) => tapId !== clientId
+          (tap) => tap.clientId !== clientId
         )
 
         this.endRenderKey++
         return
       }
 
-      this.endTurnCount[turn].push(clientId)
+      this.endTurnCount[turn].push({ clientId })
       this.endRenderKey++
 
       const currentTeam = this.teams[turn]
@@ -273,18 +283,23 @@ export default {
       postApi('/server/turn/change', { turn: nextTurn })
     },
     tapEndTurn() {
+      if (this.myPlayer.team !== this.turn) return
+
       this.turnChannel.publish('tap_end_turn', { turn: this.turn })
     },
     getTeamColor(teamCode) {
       return { backgroundColor: `var(--${teamCode})` }
     },
     getBallStyle(tap) {
-      if (tap.includes('#')) {
+      if (typeof tap === 'string' && tap.includes('#')) {
         return { color: tap }
       }
-      const color =
-        this.players &&
-        this.players.find((player) => player.clientId === tap.clientId).ball
+
+      const playerFound = this.players.find((player) => {
+        return player.clientId === tap.clientId
+      })
+      const color = playerFound.ball
+
       return { color }
     },
     getTimerFromSeconds,
@@ -347,6 +362,19 @@ export default {
 
 .teams__players {
   margin-top: 12px;
+}
+
+.teams__end-turn {
+  position: relative;
+}
+
+.end-turn__balls {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  max-width: 33%;
 }
 
 .operative {
