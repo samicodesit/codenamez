@@ -42,7 +42,7 @@ app.post('/turn/change', (req, res) => {
         }
     
         if (turn.includes('spymaster')) {
-            const cardsChannel = ably.channels.get('cards')
+            const cardsChannel = ably.channels.get('cards:fff')
             cardsChannel.publish('reset_taps', { all: true })
 
             turnChannel.publish('reset_end_turn_taps', { all: true })
@@ -66,7 +66,7 @@ app.post('/turn/timer', (req, res) => {
 
 app.post('/cards/reset_taps', (req, res) => {
     try {
-        const cardsChannel = ably.channels.get('cards')
+        const cardsChannel = ably.channels.get('cards:fff')
         cardsChannel.publish('reset_taps', { all: true })
 
         res.status(200).json({ success: 'ok' })
@@ -78,12 +78,19 @@ app.post('/cards/reset_taps', (req, res) => {
 app.post('/cards/remove_tap', (req, res) => {
     const { clientId } = req.body
 
-    const cardsChannel = ably.channels.get('cards')
+    const cardsChannel = ably.channels.get('cards:fff')
     cardsChannel.publish('remove_tap', {
         clientId
     })
 
     return res.send({ status: 200 })
+})
+
+app.post('/cards/open', (req, res) => {
+    const { word } = req.body
+
+    const cardsChannel = ably.channels.get('cards:fff')
+    cardsChannel.publish('open', { word })
 })
 
 app.post('/clues/add', (req, res) => {

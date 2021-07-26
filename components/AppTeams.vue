@@ -264,7 +264,10 @@ export default {
         } = item
 
         this.$set(this.clues, teamCode, [...this.clues[teamCode], clue])
+        this.renderKey++
       })
+
+      this.$emit('cluesLoaded')
     },
     showJoinTeam(teamCode) {
       return (

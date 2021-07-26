@@ -1,56 +1,61 @@
 <template>
-  <div class="page" v-if="playersChannel">
-    <!-- <button @click="testApi">test...</button> -->
-    <!-- <p>Timer: {{ timer.team }} ---- {{ timer.time }}</p> -->
+  <main>
+    <div class="loader" v-if="!cluesLoaded || !cardsLoaded">
+      LOADING GAME DATA...
+    </div>
+    <div class="page" v-if="playersChannel" v-show="cluesLoaded && cardsLoaded">
+      <!-- <button @click="testApi">test...</button> -->
 
-    <!-- SETTINGS -->
-    <app-settings :players-channel="playersChannel" :my-player="myPlayer" />
+      <!-- SETTINGS -->
+      <app-settings :players-channel="playersChannel" :my-player="myPlayer" />
 
-    <!-- SPECTATORS -->
-    <app-spectators :spectators="spectators" />
+      <!-- SPECTATORS -->
+      <app-spectators :spectators="spectators" />
 
-    <!-- TEAMS -->
-    <app-teams
-      :teams="teams"
-      :players-channel="playersChannel"
-      :clues-channel="cluesChannel"
-      :turn-channel="turnChannel"
-      :players="players"
-      :my-player="myPlayer"
-      :turn="turn"
-      :timer="timer"
-      :timeCounter="timeCounter"
-    />
+      <!-- TEAMS -->
+      <app-teams
+        :teams="teams"
+        :players-channel="playersChannel"
+        :clues-channel="cluesChannel"
+        :turn-channel="turnChannel"
+        :players="players"
+        :my-player="myPlayer"
+        :turn="turn"
+        :timer="timer"
+        :timeCounter="timeCounter"
+        @cluesLoaded="cluesLoaded = true"
+      />
 
-    <!-- BOARD -->
-    <section class="board" :style="getBoardColor()">
-      <div class="board__tint"></div>
-      <span>CURRENT TURN: {{ turn }}</span>
-      <div class="board__cards">
-        <div
-          v-for="(card, index) in cards"
-          :key="index"
-          :style="getCardStyle(card)"
-          @click="tapCard(card)"
-          class="card"
-        >
-          <div class="card__content">
-            <p class="card__word">{{ card.word }}</p>
-          </div>
+      <!-- BOARD -->
+      <section class="board" :style="getBoardColor()">
+        <div class="board__tint"></div>
+        <span>CURRENT TURN: {{ turn }}</span>
+        <div class="board__cards">
+          <div
+            v-for="(card, index) in cards"
+            :key="index"
+            :style="getCardStyle(card)"
+            @click="tapCard(card)"
+            class="card"
+          >
+            <div class="card__content">
+              <p class="card__word">{{ card.word }}</p>
+            </div>
 
-          <div class="card__taps">
-            <span
-              v-for="(tap, tapIndex) in card.taps"
-              :key="tapIndex"
-              class="ball"
-              :style="getBallStyle(tap)"
-              >&bull;</span
-            >
+            <div class="card__taps">
+              <span
+                v-for="(tap, tapIndex) in card.taps"
+                :key="tapIndex"
+                class="ball"
+                :style="getBallStyle(tap)"
+                >&bull;</span
+              >
+            </div>
           </div>
         </div>
-      </div>
-    </section>
-  </div>
+      </section>
+    </div>
+  </main>
 </template>
 
 <script>
@@ -90,7 +95,7 @@ export default {
     // TURN
     // TODO: change initial turn
     TURN_ORDER,
-    turn: 'red_spymaster',
+    turn: 'red',
     turnChannel: null,
     timer: {
       time: 90,
@@ -100,6 +105,10 @@ export default {
     },
     timeCounter: null,
     TIMER_DURATION: 90,
+
+    // LOADING
+    cardsLoaded: false,
+    cluesLoaded: false,
   }),
   computed: {
     ablyAuth() {
@@ -182,13 +191,10 @@ export default {
     })
 
     // Init cards
-    this.cards = this.rawCards.map((card) => {
-      return {
-        ...card,
-        opened: false,
-        taps: [],
-      }
-    })
+
+    // **** Cards channel ***** //
+    this.cardsChannel = this.ably.channels.get('cards:fff')
+    this.initCards()
 
     // **** Clues channel ***** //
     this.cluesChannel = this.ably.channels.get('clues:fff')
@@ -215,9 +221,6 @@ export default {
       this.startTimer(team)
     })
 
-    // **** Cards channel ***** //
-    this.cardsChannel = this.ably.channels.get('cards')
-
     // SUB: tap
     this.cardsChannel.subscribe('tap', (message) => {
       const {
@@ -241,6 +244,7 @@ export default {
         (player) => !player.spymaster
       ).length
       if (cardFound.taps.length === operativesCount) {
+        postApi('/server/cards/open', { word: cardFound.word })
         cardFound.opened = true
 
         // black card opened
@@ -323,6 +327,38 @@ export default {
 
   methods: {
     testApi() {},
+    initCards() {
+      this.cards = this.rawCards.map((card) => {
+        return {
+          ...card,
+          opened: false,
+          taps: [],
+        }
+      })
+
+      this.cardsChannel.history({ limit: 1000 }, (err, historyMessages) => {
+        if (err) return console.error(err)
+
+        if (historyMessages.items) {
+          this.processCardsHistory(historyMessages.items)
+        }
+      })
+    },
+    processCardsHistory(messages) {
+      const cardsOpened = messages.filter((message) => message.name === 'open')
+      cardsOpened.forEach((_card) => {
+        const {
+          data: { word },
+        } = _card
+        const cardIndex = this.cards.findIndex((card) => card.word === word)
+        this.$set(this.cards, cardIndex, {
+          ...this.cards[cardIndex],
+          opened: true,
+        })
+      })
+
+      this.cardsLoaded = true
+    },
     retrieveUsername() {
       let username = localStorage.getItem('cn_username')
       if (!username) {
@@ -438,6 +474,10 @@ export default {
 
 #__nuxt,
 #__layout {
+  height: 100%;
+}
+
+main {
   height: 100%;
 }
 
@@ -578,5 +618,172 @@ button {
   justify-content: center;
   align-items: center;
   cursor: pointer;
+}
+
+.loader {
+  margin: 100px auto;
+  font-size: 25px;
+  width: 1em;
+  height: 1em;
+  border-radius: 50%;
+  position: relative;
+  text-indent: -9999em;
+  -webkit-animation: load5 1.1s infinite ease;
+  animation: load5 1.1s infinite ease;
+  -webkit-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  transform: translateZ(0);
+}
+@-webkit-keyframes load5 {
+  0%,
+  100% {
+    box-shadow: 0em -2.6em 0em 0em #ffffff,
+      1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2),
+      2.5em 0em 0 0em rgba(255, 255, 255, 0.2),
+      1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2),
+      0em 2.5em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2),
+      -2.6em 0em 0 0em rgba(255, 255, 255, 0.5),
+      -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.7);
+  }
+  12.5% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.7),
+      1.8em -1.8em 0 0em #ffffff, 2.5em 0em 0 0em rgba(255, 255, 255, 0.2),
+      1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2),
+      0em 2.5em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2),
+      -2.6em 0em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.5);
+  }
+  25% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.5),
+      1.8em -1.8em 0 0em rgba(255, 255, 255, 0.7), 2.5em 0em 0 0em #ffffff,
+      1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2),
+      0em 2.5em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2),
+      -2.6em 0em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  37.5% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2),
+      1.8em -1.8em 0 0em rgba(255, 255, 255, 0.5),
+      2.5em 0em 0 0em rgba(255, 255, 255, 0.7), 1.75em 1.75em 0 0em #ffffff,
+      0em 2.5em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2),
+      -2.6em 0em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2),
+      1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2),
+      2.5em 0em 0 0em rgba(255, 255, 255, 0.5),
+      1.75em 1.75em 0 0em rgba(255, 255, 255, 0.7), 0em 2.5em 0 0em #ffffff,
+      -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2),
+      -2.6em 0em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  62.5% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2),
+      1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2),
+      2.5em 0em 0 0em rgba(255, 255, 255, 0.2),
+      1.75em 1.75em 0 0em rgba(255, 255, 255, 0.5),
+      0em 2.5em 0 0em rgba(255, 255, 255, 0.7), -1.8em 1.8em 0 0em #ffffff,
+      -2.6em 0em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  75% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2),
+      1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2),
+      2.5em 0em 0 0em rgba(255, 255, 255, 0.2),
+      1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2),
+      0em 2.5em 0 0em rgba(255, 255, 255, 0.5),
+      -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.7), -2.6em 0em 0 0em #ffffff,
+      -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  87.5% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2),
+      1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2),
+      2.5em 0em 0 0em rgba(255, 255, 255, 0.2),
+      1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2),
+      0em 2.5em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.5),
+      -2.6em 0em 0 0em rgba(255, 255, 255, 0.7), -1.8em -1.8em 0 0em #ffffff;
+  }
+}
+@keyframes load5 {
+  0%,
+  100% {
+    box-shadow: 0em -2.6em 0em 0em #ffffff,
+      1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2),
+      2.5em 0em 0 0em rgba(255, 255, 255, 0.2),
+      1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2),
+      0em 2.5em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2),
+      -2.6em 0em 0 0em rgba(255, 255, 255, 0.5),
+      -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.7);
+  }
+  12.5% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.7),
+      1.8em -1.8em 0 0em #ffffff, 2.5em 0em 0 0em rgba(255, 255, 255, 0.2),
+      1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2),
+      0em 2.5em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2),
+      -2.6em 0em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.5);
+  }
+  25% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.5),
+      1.8em -1.8em 0 0em rgba(255, 255, 255, 0.7), 2.5em 0em 0 0em #ffffff,
+      1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2),
+      0em 2.5em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2),
+      -2.6em 0em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  37.5% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2),
+      1.8em -1.8em 0 0em rgba(255, 255, 255, 0.5),
+      2.5em 0em 0 0em rgba(255, 255, 255, 0.7), 1.75em 1.75em 0 0em #ffffff,
+      0em 2.5em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2),
+      -2.6em 0em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2),
+      1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2),
+      2.5em 0em 0 0em rgba(255, 255, 255, 0.5),
+      1.75em 1.75em 0 0em rgba(255, 255, 255, 0.7), 0em 2.5em 0 0em #ffffff,
+      -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.2),
+      -2.6em 0em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  62.5% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2),
+      1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2),
+      2.5em 0em 0 0em rgba(255, 255, 255, 0.2),
+      1.75em 1.75em 0 0em rgba(255, 255, 255, 0.5),
+      0em 2.5em 0 0em rgba(255, 255, 255, 0.7), -1.8em 1.8em 0 0em #ffffff,
+      -2.6em 0em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  75% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2),
+      1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2),
+      2.5em 0em 0 0em rgba(255, 255, 255, 0.2),
+      1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2),
+      0em 2.5em 0 0em rgba(255, 255, 255, 0.5),
+      -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.7), -2.6em 0em 0 0em #ffffff,
+      -1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2);
+  }
+  87.5% {
+    box-shadow: 0em -2.6em 0em 0em rgba(255, 255, 255, 0.2),
+      1.8em -1.8em 0 0em rgba(255, 255, 255, 0.2),
+      2.5em 0em 0 0em rgba(255, 255, 255, 0.2),
+      1.75em 1.75em 0 0em rgba(255, 255, 255, 0.2),
+      0em 2.5em 0 0em rgba(255, 255, 255, 0.2),
+      -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.5),
+      -2.6em 0em 0 0em rgba(255, 255, 255, 0.7), -1.8em -1.8em 0 0em #ffffff;
+  }
 }
 </style>
