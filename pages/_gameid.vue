@@ -3,7 +3,11 @@
     <div class="loader" v-if="!cluesLoaded || !cardsLoaded">
       LOADING GAME DATA...
     </div>
-    <div class="page" v-if="playersChannel" v-show="cluesLoaded && cardsLoaded">
+    <div
+      class="page"
+      v-if="players && players.length"
+      v-show="cluesLoaded && cardsLoaded"
+    >
       <!-- <button @click="testApi">test...</button> -->
 
       <!-- SETTINGS -->
@@ -60,6 +64,8 @@
 
 <script>
 import Ably from 'ably'
+import { nanoid } from 'nanoid'
+
 import { generateRandomColor, postApi } from '../utils'
 import { TURN_ORDER, TEAM_CONFIG, RAW_CARDS } from '../config'
 
@@ -147,6 +153,12 @@ export default {
     },
   },
   watch: {
+    players: {
+      handler() {
+        this.initCards()
+      },
+      // immediate: true,
+    },
     gameEnded(value) {
       if (value) {
         this.turn = 'end'
@@ -184,20 +196,30 @@ export default {
   },
   mounted() {
     // Init Ably
+    if (!localStorage.getItem('cn_uuid')) {
+      localStorage.setItem('cn_uuid', nanoid(8))
+    }
+
+    if (!localStorage.getItem('cn_ball')) {
+      localStorage.setItem('cn_ball', generateRandomColor())
+    }
+
     this.ably = Ably.Realtime({
       key: this.ably_key,
       authUrl: '/server/ably/auth',
       authMethod: 'POST',
+      authParams: {
+        uniqueID: localStorage.getItem('cn_uuid'),
+      },
     })
 
     // Init cards
 
     // **** Cards channel ***** //
-    this.cardsChannel = this.ably.channels.get('cards:fff')
-    this.initCards()
+    this.cardsChannel = this.ably.channels.get('cards:ggg')
 
     // **** Clues channel ***** //
-    this.cluesChannel = this.ably.channels.get('clues:fff')
+    this.cluesChannel = this.ably.channels.get('clues:ggg')
 
     // **** Turn Channel ***** //
     this.turnChannel = this.ably.channels.get('turn')
@@ -317,7 +339,7 @@ export default {
       username: this.retrieveUsername(),
       team: '',
       spymaster: false,
-      ball: generateRandomColor(),
+      ball: localStorage.getItem('cn_ball'),
     })
   },
 
@@ -345,20 +367,78 @@ export default {
       })
     },
     processCardsHistory(messages) {
-      const cardsOpened = messages.filter((message) => message.name === 'open')
-      cardsOpened.forEach((_card) => {
+      let tapStack = []
+      let tapSearching = true
+      let tapsHandled = false
+
+      const handleTapStack = () => {
+        tapStack.forEach((message) => {
+          const {
+            clientId,
+            data: { word },
+          } = message
+
+          const cardIndex = this.cards.findIndex((card) => card.word === word)
+
+          const playerExists = this.players.find(
+            (player) => player.clientId === clientId
+          )
+
+          // player left or invalid
+          if (!playerExists) return
+
+          this.$set(this.cards, cardIndex, {
+            ...this.cards[cardIndex],
+            taps: [...this.cards[cardIndex].taps, { clientId }],
+          })
+        })
+      }
+
+      messages.forEach((message) => {
         const {
           data: { word },
-        } = _card
-        const cardIndex = this.cards.findIndex((card) => card.word === word)
-        this.$set(this.cards, cardIndex, {
-          ...this.cards[cardIndex],
-          opened: true,
-        })
+          clientId,
+        } = message
+
+        if (message.name === 'open') {
+          const cardIndex = this.cards.findIndex((card) => card.word === word)
+          this.$set(this.cards, cardIndex, {
+            ...this.cards[cardIndex],
+            opened: true,
+          })
+        }
+
+        if (message.name === 'tap' && tapSearching) {
+          const tapFound = tapStack.find(
+            (card) => card.data.word === word && card.clientId === clientId
+          )
+
+          if (tapFound) {
+            tapStack = tapStack.filter((tap) => tap.clientId !== clientId)
+          } else {
+            tapStack.push(message)
+          }
+        }
+
+        if (message.name === 'reset_taps' && !tapsHandled) {
+          tapSearching = false
+          handleTapStack()
+          tapsHandled = true
+        }
       })
 
       this.cardsLoaded = true
     },
+    // processCardsHistory(messages) {
+    //   const cardsOpened = messages.filter((message) => message.name === 'open')
+    //   cardsOpened.forEach((_card) => {
+    //     const {
+    //       data: { word },
+    //     } = _card
+    //   })
+
+    //   this.cardsLoaded = true
+    // },
     retrieveUsername() {
       let username = localStorage.getItem('cn_username')
       if (!username) {

@@ -31,7 +31,10 @@
           <span
             class="ball"
             :style="
-              getBallStyle(team.players.find((player) => player.spymaster).ball)
+              getBallStyle(
+                team.players.find((player) => player.spymaster) &&
+                  team.players.find((player) => player.spymaster).ball
+              )
             "
             @click="updateBallColor()"
             >&bull;</span
@@ -252,6 +255,8 @@ export default {
         if (data.items.length) {
           return this.retrieveCluesHistory(data.items)
         }
+
+        this.$emit('cluesLoaded')
       })
     },
     retrieveCluesHistory(items) {
@@ -320,13 +325,15 @@ export default {
       return { backgroundColor: `var(--${teamCode})` }
     },
     getBallStyle(tap) {
-      if (typeof tap === 'string' && tap.includes('#')) {
+      if (typeof tap === 'string') {
         return { color: tap }
       }
 
       const playerFound = this.players.find((player) => {
         return player.clientId === tap.clientId
       })
+
+      if (!playerFound) return
       const color = playerFound.ball
 
       return { color }

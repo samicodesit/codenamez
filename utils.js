@@ -19,8 +19,10 @@ export const postApi = (endpoint, body) => {
 }
 
 export const generateRandomColor = () => {
-    const randomColor = Math.floor(Math.random()*16777215).toString(16);
-    return '#' + randomColor
+    const colors = ['yellow', 'purple', 'maroon', 'aqua', 'fucshia', 'salmon']
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+    return randomColor
 }
 
 // time: seconds

@@ -1,6 +1,5 @@
 const express = require('express');
 const Ably = require('ably');
-const { nanoid } = require('nanoid');
 
 const app = express();
 
@@ -13,8 +12,8 @@ app.use(express.urlencoded({extended: true}));
 app.use(express.json()) // To parse the incoming requests with JSON payloads
 
 app.post("/ably/auth", (req, res) => {
-    const uniqueID = nanoid();
-    ably.auth.createTokenRequest({ clientId: uniqueID, foo: 'bar' }, (err, tokenRequest) => {
+    const { uniqueID } = req.body
+    ably.auth.createTokenRequest({ clientId: uniqueID }, (err, tokenRequest) => {
         if (err) {
             console.error(err);
             res.status(500);
@@ -42,7 +41,7 @@ app.post('/turn/change', (req, res) => {
         }
     
         if (turn.includes('spymaster')) {
-            const cardsChannel = ably.channels.get('cards:fff')
+            const cardsChannel = ably.channels.get('cards:ggg')
             cardsChannel.publish('reset_taps', { all: true })
 
             turnChannel.publish('reset_end_turn_taps', { all: true })
@@ -66,7 +65,7 @@ app.post('/turn/timer', (req, res) => {
 
 app.post('/cards/reset_taps', (req, res) => {
     try {
-        const cardsChannel = ably.channels.get('cards:fff')
+        const cardsChannel = ably.channels.get('cards:ggg')
         cardsChannel.publish('reset_taps', { all: true })
 
         res.status(200).json({ success: 'ok' })
@@ -78,7 +77,7 @@ app.post('/cards/reset_taps', (req, res) => {
 app.post('/cards/remove_tap', (req, res) => {
     const { clientId } = req.body
 
-    const cardsChannel = ably.channels.get('cards:fff')
+    const cardsChannel = ably.channels.get('cards:ggg')
     cardsChannel.publish('remove_tap', {
         clientId
     })
@@ -89,14 +88,14 @@ app.post('/cards/remove_tap', (req, res) => {
 app.post('/cards/open', (req, res) => {
     const { word } = req.body
 
-    const cardsChannel = ably.channels.get('cards:fff')
+    const cardsChannel = ably.channels.get('cards:ggg')
     cardsChannel.publish('open', { word })
 })
 
 app.post('/clues/add', (req, res) => {
     const { clue, team } = req.body
 
-    const cluesChannel = ably.channels.get('clues:fff')
+    const cluesChannel = ably.channels.get('clues:ggg')
     cluesChannel.publish('add', {
         clue,
         team,

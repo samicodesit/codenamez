@@ -9,7 +9,7 @@ export const TURN_ORDER = {
 
 export const RAW_CARDS = [
     {
-        word: 'exercitation',
+        word: 'orange',
         color: 'red',
     },
     {
@@ -25,7 +25,7 @@ export const RAW_CARDS = [
         color: 'red',
     },
     {
-        word: 'incididunt',
+        word: 'loirrk',
         color: 'red',
     },
     {
@@ -33,7 +33,7 @@ export const RAW_CARDS = [
         color: 'red',
     },
     {
-        word: 'nulla',
+        word: 'fopfo',
         color: 'red',
     },
     {
@@ -53,7 +53,7 @@ export const RAW_CARDS = [
         color: 'red',
     },
     {
-        word: 'deserunt',
+        word: 'depppunt',
         color: 'red',
     },
     {
@@ -81,7 +81,7 @@ export const RAW_CARDS = [
         color: 'blue',
     },
     {
-        word: 'Lorem',
+        word: 'Lorezm',
         color: 'blue',
     },
     {
@@ -97,7 +97,7 @@ export const RAW_CARDS = [
         color: 'blue',
     },
     {
-        word: 'eiusmod',
+        word: 'exxmod',
         color: 'blue',
     },
     {
@@ -113,7 +113,7 @@ export const RAW_CARDS = [
         color: 'blue',
     },
     {
-        word: 'mollit',
+        word: 'oriaaa',
         color: 'blue',
     },
     {
@@ -121,11 +121,11 @@ export const RAW_CARDS = [
         color: 'blue',
     },
     {
-        word: 'sint',
+        word: 'poaakfj',
         color: 'blue',
     },
     {
-        word: 'Lorem',
+        word: 'zzzorem',
         color: 'blue',
     },
     {
@@ -145,7 +145,7 @@ export const RAW_CARDS = [
         color: 'black',
     },
     {
-        word: 'cillum',
+        word: 'xcllum',
         color: 'black',
     },
     {

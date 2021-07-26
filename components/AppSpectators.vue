@@ -72,7 +72,7 @@ export default {
   left: 50%;
   transform: translateX(-50%) translateY(-50%);
   min-width: 150px;
-  z-index: 20;
+  z-index: 200;
   background: var(--secondary);
   border-radius: 6px;
   padding: 24px;
@@ -85,7 +85,7 @@ export default {
   bottom: 0;
   right: 0;
   background: rgba(0, 0, 0, 0.3);
-  z-index: 10;
+  z-index: 100;
 }
 
 .spectators-modal__list {
