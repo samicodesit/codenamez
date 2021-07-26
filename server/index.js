@@ -89,7 +89,7 @@ app.post('/cards/remove_tap', (req, res) => {
 app.post('/clues/add', (req, res) => {
     const { clue, team } = req.body
 
-    const cluesChannel = ably.channels.get('clues')
+    const cluesChannel = ably.channels.get('clues:fff')
     cluesChannel.publish('add', {
         clue,
         team,

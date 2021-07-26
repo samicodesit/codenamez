@@ -183,9 +183,7 @@ export default {
   }),
   mounted() {
     // Init team clues
-    this.TEAM_CONFIG.forEach((teamCode) => {
-      this.clues[teamCode] = []
-    })
+    this.initClues()
 
     // Init end turn count
     this.TEAM_CONFIG.forEach((teamCode) => {
@@ -240,6 +238,34 @@ export default {
     })
   },
   methods: {
+    initClues() {
+      this.TEAM_CONFIG.forEach((teamCode) => {
+        this.clues[teamCode] = []
+      })
+
+      this.cluesChannel.history((err, data) => {
+        if (err) {
+          return console.error(err)
+        }
+
+        // if any history exists
+        if (data.items.length) {
+          return this.retrieveCluesHistory(data.items)
+        }
+      })
+    },
+    retrieveCluesHistory(items) {
+      const addedClues = items.filter((item) => item.name === 'add')
+      const reversedClues = [...addedClues].reverse()
+
+      reversedClues.forEach((item) => {
+        const {
+          data: { clue, team: teamCode },
+        } = item
+
+        this.$set(this.clues, teamCode, [...this.clues[teamCode], clue])
+      })
+    },
     showJoinTeam(teamCode) {
       return (
         teamCode !== this.myPlayer.team ||

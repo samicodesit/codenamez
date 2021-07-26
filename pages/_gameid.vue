@@ -90,7 +90,7 @@ export default {
     // TURN
     // TODO: change initial turn
     TURN_ORDER,
-    turn: 'red',
+    turn: 'red_spymaster',
     turnChannel: null,
     timer: {
       time: 90,
@@ -191,7 +191,7 @@ export default {
     })
 
     // **** Clues channel ***** //
-    this.cluesChannel = this.ably.channels.get('clues')
+    this.cluesChannel = this.ably.channels.get('clues:fff')
 
     // **** Turn Channel ***** //
     this.turnChannel = this.ably.channels.get('turn')
