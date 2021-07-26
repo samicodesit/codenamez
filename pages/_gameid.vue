@@ -56,7 +56,7 @@
 <script>
 import Ably from 'ably'
 import { generateRandomColor, postApi } from '../utils'
-import { TURN_ORDER, TEAM_CONFIG } from '../config'
+import { TURN_ORDER, TEAM_CONFIG, RAW_CARDS } from '../config'
 
 import AppSettings from '~/components/AppSettings'
 import AppSpectators from '~/components/AppSpectators'
@@ -83,44 +83,7 @@ export default {
     cluesChannel: null,
 
     // BOARD
-    rawCards: [
-      { word: 'Banana', color: 'red' },
-      { word: 'Apple', color: 'blue' },
-      { word: 'Danger', color: 'black' },
-      { word: 'Pear', color: 'blue' },
-      { word: 'Watermelon', color: 'red' },
-      { word: 'Strawberry', color: 'blue' },
-      { word: 'Hazard', color: 'black' },
-      { word: 'Orange', color: 'red' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-      { word: 'Death', color: 'black' },
-    ],
+    rawCards: RAW_CARDS,
     cards: [],
     cardsChannel: null,
 

@@ -334,7 +334,7 @@ export default {
 
 .teams__points {
   position: absolute;
-  font-size: 14rem;
+  font-size: 10rem;
   font-weight: bold;
   left: 50%;
   top: 50%;
