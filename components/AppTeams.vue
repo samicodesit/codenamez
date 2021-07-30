@@ -21,8 +21,8 @@
 
       <div class="teams__spymaster">
         <button
-          class="button--teams"
           v-if="!teamHasMaster(teamCode)"
+          class="button--teams"
           @click="joinTeam(teamCode, true)"
         >
           Become spymaster
@@ -76,20 +76,20 @@
       <div class="clues">
         <h4>Clues</h4>
         <p
-          class="clues__placeholder"
           v-if="
             clues &&
             clues[teamCode] &&
             !clues[teamCode].length &&
             !myPlayer.spymaster
           "
+          class="clues__placeholder"
         >
           Wait for your spymaster
         </p>
 
         <form
-          class="clues__form"
           v-if="showClueInput(teamCode)"
+          class="clues__form"
           @submit.prevent="submitClue"
         >
           <input class="clues__input" v-model="clueInput" type="text" />
@@ -110,11 +110,11 @@
         >
           End turn
         </button>
-        <ul class="end-turn__balls" :key="`end_${endRenderKey}`">
+        <ul :key="`end_${endRenderKey}`" class="end-turn__balls">
           <li
-            class="end-turn__ball"
             v-for="(tap, tapIndex) in endTurnCount[teamCode]"
             :key="tapIndex"
+            class="end-turn__ball"
           >
             <span class="ball" :style="getBallStyle(tap)">&bull;</span>
           </li>
@@ -149,6 +149,10 @@ export default {
       default: null,
     },
     turnChannel: {
+      type: Object,
+      default: null,
+    },
+    teamsChannel: {
       type: Object,
       default: null,
     },

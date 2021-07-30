@@ -22,6 +22,7 @@
         :players-channel="playersChannel"
         :clues-channel="cluesChannel"
         :turn-channel="turnChannel"
+        :teams-channel="teamsChannel"
         :players="players"
         :my-player="myPlayer"
         :turn="turn"
@@ -115,6 +116,7 @@ export default {
     // LOADING
     cardsLoaded: false,
     cluesLoaded: false,
+    teamsChannel: null,
   }),
   computed: {
     ablyAuth() {
@@ -153,12 +155,6 @@ export default {
     },
   },
   watch: {
-    players: {
-      handler() {
-        this.initCards()
-      },
-      // immediate: true,
-    },
     gameEnded(value) {
       if (value) {
         this.turn = 'end'
@@ -213,6 +209,8 @@ export default {
       },
     })
 
+    this.teamsChannel = this.ably.channels.get('teams')
+
     // Init cards
 
     // **** Cards channel ***** //
@@ -222,7 +220,8 @@ export default {
     this.cluesChannel = this.ably.channels.get('clues:ggg')
 
     // **** Turn Channel ***** //
-    this.turnChannel = this.ably.channels.get('turn')
+    this.turnChannel = this.ably.channels.get('turn:ggg')
+    this.processTurnHistory()
 
     // SUB: change turn
     this.turnChannel.subscribe('change', (message) => {
@@ -310,6 +309,7 @@ export default {
     this.playersChannel.presence.subscribe('enter', (member) => {
       const { clientId, data } = member
       this.players.push({ clientId, ...data })
+      this.initCards()
     })
     // SUB: leave
     this.playersChannel.presence.subscribe('leave', (data) => {
@@ -341,6 +341,21 @@ export default {
       spymaster: false,
       ball: localStorage.getItem('cn_ball'),
     })
+
+    // this.playersChannel.presence.history({ limit: 2 }, (err, messages) => {
+    //   const loadMore = (msgs) => {
+    //     if (msgs.hasNext()) {
+
+    //     }
+    //   }
+    //   if (err) console.log(err)
+    //   console.log(messages, 'messages presence history')
+
+    //   messages.next((err, nextPage) => {
+    //     if (err) console.log(err, 'ssss')
+    //     console.log(nextPage, '!!!!')
+    //   })
+    // })
   },
 
   beforeDestroy() {
@@ -366,7 +381,35 @@ export default {
         }
       })
     },
+    processTurnHistory() {
+      this.turnChannel.history({ limit: 1000 }, (err, turnMessages) => {
+        if (err) return console.error(err)
+
+        let shouldStop = false
+
+        if (turnMessages.items.length) {
+          turnMessages.items.forEach((item) => {
+            if (shouldStop) return
+            if (item.name === 'change') {
+              shouldStop = true
+              this.turn = item.data.turn
+
+              if (item.data.turn === 'end') {
+                clearInterval(this.timer.instance)
+                this.timer.instance = null
+                return
+              }
+
+              this.timer.end_timestamp =
+                item.data.timestamp + this.timer.time * 1000
+              this.startTimer(item.data.turn)
+            }
+          })
+        }
+      })
+    },
     processCardsHistory(messages) {
+      console.log('processing cards history...')
       let tapStack = []
       let tapSearching = true
       let tapsHandled = false
@@ -429,16 +472,6 @@ export default {
 
       this.cardsLoaded = true
     },
-    // processCardsHistory(messages) {
-    //   const cardsOpened = messages.filter((message) => message.name === 'open')
-    //   cardsOpened.forEach((_card) => {
-    //     const {
-    //       data: { word },
-    //     } = _card
-    //   })
-
-    //   this.cardsLoaded = true
-    // },
     retrieveUsername() {
       let username = localStorage.getItem('cn_username')
       if (!username) {
@@ -507,8 +540,10 @@ export default {
       this.timer.team = team
       this.timer.instance = setInterval(() => {
         this.timeCounter--
-        if (Math.floor(this.timeCounter) === 0) {
+        if (Math.floor(this.timeCounter) <= 0) {
           clearInterval(this.timer.instance)
+          this.timer.instance = null
+          this.timeCounter = 0
         }
       }, 1000)
     },
